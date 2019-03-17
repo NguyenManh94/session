@@ -3,6 +3,7 @@
  * Copyright(c) 2010 Sencha Inc.
  * Copyright(c) 2011 TJ Holowaychuk
  * Copyright(c) 2014-2015 Douglas Christopher Wilson
+ * Copyright(c) 2019-2020 ManhNV
  * MIT Licensed
  */
 
@@ -52,9 +53,9 @@ exports.MemoryStore = MemoryStore;
  * @private
  */
 
-var warning = 'Warning: connect.session() MemoryStore is not\n'
-  + 'designed for a production environment, as it will leak\n'
-  + 'memory, and will not scale past a single process.';
+var warning = 'Warning: connect.session() MemoryStore is not\n' +
+  'designed for a production environment, as it will leak\n' +
+  'memory, and will not scale past a single process.';
 
 /**
  * Node.js 0.8+ async implementation.
@@ -62,9 +63,11 @@ var warning = 'Warning: connect.session() MemoryStore is not\n'
  */
 
 /* istanbul ignore next */
-var defer = typeof setImmediate === 'function'
-  ? setImmediate
-  : function(fn){ process.nextTick(fn.bind.apply(fn, arguments)) }
+var defer = typeof setImmediate === 'function' ?
+  setImmediate :
+  function (fn) {
+    process.nextTick(fn.bind.apply(fn, arguments))
+  }
 
 /**
  * Setup session store with the given `options`.
@@ -72,7 +75,7 @@ var defer = typeof setImmediate === 'function'
  * @param {Object} [options]
  * @param {Object} [options.cookie] Options for cookie
  * @param {Function} [options.genid]
- * @param {String} [options.name=connect.sid] Session ID cookie name
+ * @param {Object} options.configSecures Config secure (note: default require field)
  * @param {Boolean} [options.proxy]
  * @param {Boolean} [options.resave] Resave unmodified sessions back to the store
  * @param {Boolean} [options.rolling] Enable/disable rolling session expiration
@@ -94,7 +97,10 @@ function session(options) {
   var generateId = opts.genid || generateSessionId
 
   // get the session cookie name
-  var name = opts.name || opts.key || 'connect.sid'
+  var name = opts.configSecures[0].name || opts.key || 'connect.sid';
+
+  // get the session default domain
+  var domain = opts.configSecures[0].domain;
 
   // get the session store
   var store = opts.store || new MemoryStore()
@@ -155,9 +161,11 @@ function session(options) {
   }
 
   // generates the new session
-  store.generate = function(req){
+  store.generate = function (req) {
     req.sessionID = generateId(req);
     req.session = new Session(req);
+
+    cookieOptions.domain = domain;
     req.session.cookie = new Cookie(cookieOptions);
 
     if (cookieOptions.secure === 'auto') {
@@ -177,6 +185,15 @@ function session(options) {
   })
 
   return function session(req, res, next) {
+    // fetch name session
+    var matchDomain = opts.configSecures
+      .find(function (configSecure) {
+        return (new RegExp('^https?:\/\/' + configSecure.domain + '.*')).test(req.headers.referer) === true;
+      });
+    if (matchDomain) {
+      name = matchDomain.name;
+    }
+
     // self-awareness
     if (req.session) {
       next()
@@ -217,7 +234,7 @@ function session(options) {
     var cookieId = req.sessionID = getcookie(req, name, secrets);
 
     // set-cookie
-    onHeaders(res, function(){
+    onHeaders(res, function () {
       if (!req.session) {
         debug('no session');
         return;
@@ -281,9 +298,9 @@ function session(options) {
 
         if (!isNaN(contentLength) && contentLength > 0) {
           // measure chunk
-          chunk = !Buffer.isBuffer(chunk)
-            ? Buffer.from(chunk, encoding)
-            : chunk;
+          chunk = !Buffer.isBuffer(chunk) ?
+            Buffer.from(chunk, encoding) :
+            chunk;
           encoding = undefined;
 
           if (chunk.length !== 0) {
@@ -420,9 +437,9 @@ function session(options) {
         return false;
       }
 
-      return !saveUninitializedSession && cookieId !== req.sessionID
-        ? isModified(req.session)
-        : !isSaved(req.session)
+      return !saveUninitializedSession && cookieId !== req.sessionID ?
+        isModified(req.session) :
+        !isSaved(req.session)
     }
 
     // determine if session should be touched
@@ -443,9 +460,9 @@ function session(options) {
         return false;
       }
 
-      return cookieId != req.sessionID
-        ? saveUninitializedSession || isModified(req.session)
-        : rollingSessions || req.session.cookie.expires != null && isModified(req.session);
+      return cookieId != req.sessionID ?
+        saveUninitializedSession || isModified(req.session) :
+        rollingSessions || req.session.cookie.expires != null && isModified(req.session);
     }
 
     // generate a session if the browser doesn't send a sessionID
@@ -458,7 +475,7 @@ function session(options) {
 
     // generate the session object
     debug('fetching %s', req.sessionID);
-    store.get(req.sessionID, function(err, sess){
+    store.get(req.sessionID, function (err, sess) {
       // error handling
       if (err) {
         debug('error %j', err);
@@ -469,11 +486,11 @@ function session(options) {
         }
 
         generate();
-      // no session
+        // no session
       } else if (!sess) {
         debug('no session found');
         generate();
-      // populate req.session
+        // populate req.session
       } else {
         debug('session found');
         store.createSession(req, sess);
@@ -623,9 +640,9 @@ function issecure(req, trustProxy) {
   // read the proto from x-forwarded-proto header
   var header = req.headers['x-forwarded-proto'] || '';
   var index = header.indexOf(',');
-  var proto = index !== -1
-    ? header.substr(0, index).toLowerCase().trim()
-    : header.toLowerCase().trim()
+  var proto = index !== -1 ?
+    header.substr(0, index).toLowerCase().trim() :
+    header.toLowerCase().trim()
 
   return proto === 'https';
 }
