@@ -1,6 +1,6 @@
 {
-  "name": "express-session-b3",
-  "version": "1.15.6",
+  "name": "express-session-multiple",
+  "version": "1.15.7",
   "description": "Simple session middleware for Express",
   "main": "./index.js",
   "types": "./index.d.ts",

@@ -1,4 +1,12 @@
 unreleased
+
+==========
+
+  * Fix issue where `resave: false` may not save altered sessions
+  * Remove name from option session
+  * Apply new config key `configSecure` is apply multiple domain
+
+1.15.7 / 2019-03-18
 ==========
 
   * Catch invalid `cookie.maxAge` value earlier

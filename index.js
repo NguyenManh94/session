@@ -100,7 +100,7 @@ function session(options) {
   var name = opts.configSecures[0].name || opts.key || 'connect.sid';
 
   // get the session default domain
-  var domain = opts.configSecures[0].domain;
+  var domain = cookieOptions.domain;
 
   // get the session store
   var store = opts.store || new MemoryStore()
